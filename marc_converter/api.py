@@ -53,8 +53,14 @@ def api_convert():
         logger.error("No file or url provided in request.")
         return jsonify({'error': 'No file or url provided'}), 400
     except Exception as e:
+        import traceback
+        tb_str = traceback.format_exc()
         logger.exception(f"Unhandled exception in /api/convert: {e}")
-        # In debug mode, return error details
+        # In debug mode, return error details and logs
         if app.config.get('DEBUG'):
-            return jsonify({'error': str(e), 'exception': repr(e)}), 500
+            return jsonify({
+                'error': str(e),
+                'exception': repr(e),
+                'traceback': tb_str
+            }), 500
         return jsonify({'error': 'Internal server error'}), 500
