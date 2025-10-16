@@ -90,15 +90,24 @@ curl -H "Authorization: Bearer <your_token>" -F "file=@yourfile.mrc" http://loca
   - JSON body: `{ "url": "https://..." }`
 
 
+
 #### Response Schema
 - **Success (HTTP 200):**
-  - Returns a JSON array of MARC records, each as a dictionary (see [pymarc as_dict](https://pymarc.readthedocs.io/en/latest/api/pymarc.html#pymarc.Record.as_dict)).
-  - Example:
+  - Returns a JSON array of KBART-style metadata records (when `?format=json`), or a file (CSV/TSV) if requested.
+  - Example (JSON):
     ```json
     [
       {
-        "leader": "...",
-        "fields": [ ... ]
+        "title_id": "string",
+        "publication_title": "string",
+        "title_url": "string",
+        "first_author": "string",
+        "online_identifier": "string",
+        "publisher_name": "string",
+        "publication_type": "string",
+        "date_monograph_published_online": "string",
+        "first_editor": "string",
+        "access_type": "string"
       },
       ...
     ]
@@ -109,6 +118,23 @@ curl -H "Authorization: Bearer <your_token>" -F "file=@yourfile.mrc" http://loca
     ```json
     { "error": "No file uploaded" }
     ```
+
+##### JSON Response Properties (KBART-style)
+
+| Property                        | Type   | Description                                                      |
+|----------------------------------|--------|------------------------------------------------------------------|
+| `title_id`                      | string | Unique record identifier (from MARC 001)                         |
+| `publication_title`             | string | Title of the publication (from MARC 245)                         |
+| `title_url`                     | string | URL to the title (from MARC 856$u, if present)                   |
+| `first_author`                  | string | First author (from MARC 100/110/111)                             |
+| `online_identifier`             | string | Online identifier(s), e.g. ISBN(s) (from MARC 020$a)             |
+| `publisher_name`                | string | Publisher name (from MARC 264/260)                               |
+| `publication_type`              | string | Publication type: "monograph", "serial", or "other"             |
+| `date_monograph_published_online`| string | Online publication date (from MARC 264/260)                      |
+| `first_editor`                  | string | First editor (from MARC 700$e=editor)                            |
+| `access_type`                   | string | "openaccess" or "paid" (from MARC 506/856)                      |
+
+All properties are returned as strings. If a value is missing in the MARC record, the property will be an empty string or a default value.
 
 
 #### Integration Tips for Developers & AI Agents
