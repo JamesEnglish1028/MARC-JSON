@@ -169,15 +169,20 @@ with open("yourfile.mrc", "rb") as f:
     else:
         print("Error:", resp.json()["error"])
 
+
+
+
 # URL ingestion
+
 resp = requests.post(
+
     "http://localhost:10000/api/convert",
     json={"url": "https://example.com/yourfile.mrc"},
     headers={"Authorization": "Bearer <your_token>"}  # optional
-)
-if resp.ok:
-    records = resp.json()
+
+
 else:
+
     print("Error:", resp.json()["error"])
 ```
 
@@ -185,13 +190,10 @@ else:
 
 #### Example Integration (React/JavaScript)
 ```jsx
+
 // File upload
-async function uploadMarcFile(file, token) {
-  const formData = new FormData();
+
   formData.append('file', file);
-  const resp = await fetch('http://localhost:10000/api/convert', {
-    method: 'POST',
-    headers: token ? { 'Authorization': `Bearer ${token}` } : {},
     body: formData
   });
   if (resp.ok) {
