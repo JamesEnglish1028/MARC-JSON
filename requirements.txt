@@ -3,3 +3,4 @@ requests
 pymarc
 openpyxl
 gunicorn
+flask-cors
