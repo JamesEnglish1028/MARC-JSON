@@ -28,10 +28,18 @@ def api_convert():
             return jsonify({'error': 'Unauthorized'}), 401
         fmt = request.args.get('format', 'json').lower()
         # Accept file upload
+        logger.info(f"Request.files keys: {list(request.files.keys())}")
         if 'file' in request.files:
             file = request.files['file']
-            logger.info(f"File upload received: {file.filename}")
-            return process_marc_file_upload(file, fmt)
+            logger.info(f"File upload received: filename={getattr(file, 'filename', None)}, content_type={getattr(file, 'content_type', None)}, content_length={getattr(file, 'content_length', None)}")
+            if not file or not getattr(file, 'filename', None):
+                logger.error("File object is None or missing filename.")
+                return jsonify({'error': 'No file uploaded or filename missing'}), 400
+            try:
+                return process_marc_file_upload(file, fmt)
+            except Exception as e:
+                logger.exception(f"Error in process_marc_file_upload: {e}")
+                return jsonify({'error': f'File upload failed: {str(e)}'}), 500
         # Accept JSON with URL
         if request.is_json:
             data = request.get_json()
