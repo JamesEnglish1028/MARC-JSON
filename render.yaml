@@ -7,7 +7,7 @@ services:
     startCommand: gunicorn -w 4 -b 0.0.0.0:10000 marc_converter.app:app
     envVars:
       - key: FLASK_ENV
-        value: production
+        value: development
       - key: DEBUG
         value: "1"
       - key: LOG_LEVEL
