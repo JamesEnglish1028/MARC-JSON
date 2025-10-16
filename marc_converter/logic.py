@@ -181,9 +181,12 @@ def marc_to_row(record):
     publication_type = get_publication_type(record)
     access_type = get_access_type(record)
 
-    # --- Source ID and Type logic ---
+    # --- Source ID and Type logic (refined DOI recognition) ---
     source_id = ""
     source_id_type = ""
+    doi_regex = re.compile(r"(?:10\\.\d{4,9}/[-._;()/:A-Z0-9]+)", re.IGNORECASE)
+    doi_url_regex = re.compile(r"https?://(?:dx\\.)?doi\\.org/(10\\.\d{4,9}/[-._;()/:A-Z0-9]+)", re.IGNORECASE)
+
     # 1. Doc ID (ProQuest)
     if title_id.startswith("urn:librarysimplified.org/terms/id/ProQuest%20Doc%20ID/"):
         source_id = title_id.split("/ProQuest%20Doc%20ID/")[-1]
@@ -196,11 +199,22 @@ def marc_to_row(record):
     elif title_id.startswith("urn:uuid:"):
         source_id = title_id
         source_id_type = "Media ID"
-    # 4. DOI
-    elif title_url.startswith("https://doi.org/"):
+    # 4. DOI (URL form in title_url)
+    elif doi_url_regex.match(title_url):
+        match = doi_url_regex.match(title_url)
         source_id = title_url
         source_id_type = "DOI"
-    # 5. ISBN
+    # 5. DOI (bare string in title_id, online_identifier, or title_url)
+    elif doi_regex.match(title_id):
+        source_id = doi_regex.match(title_id).group(0)
+        source_id_type = "DOI"
+    elif any(doi_regex.match(oid) for oid in online_identifier_list):
+        source_id = next(oid for oid in online_identifier_list if doi_regex.match(oid))
+        source_id_type = "DOI"
+    elif doi_regex.match(title_url):
+        source_id = doi_regex.match(title_url).group(0)
+        source_id_type = "DOI"
+    # 6. ISBN
     elif online_identifier_list:
         source_id = online_identifier_list[0]
         source_id_type = "ISBN"

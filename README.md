@@ -135,8 +135,8 @@ curl -H "Authorization: Bearer <your_token>" -F "file=@yourfile.mrc" http://loca
 | `date_monograph_published_online`| string | Online publication date (from MARC 264/260)                      |
 | `first_editor`                  | string | First editor (from MARC 700$e=editor)                            |
 | `access_type`                   | string | "openaccess" or "paid" (from MARC 506/856)                      |
-| `source_id`                     | string | Source identifier, pattern-matched from title_id, URL, or ISBN   |
-| `source_id_type`                | string | Type of source ID: "DOI", "ISBN", "Doc ID", "Media ID", "File Handle", or "Unknown" |
+| `source_id`                     | string | Source identifier, pattern-matched from title_id, URL, ISBN, or DOI. DOI recognition supports both the alphanumeric string (e.g., `10.1000/182`) and the URL form (e.g., `https://doi.org/10.1000/182` or `https://dx.doi.org/10.1000/182`). |
+| `source_id_type`                | string | Type of source ID: "DOI" (if a valid DOI string or URL is detected), "ISBN", "Doc ID", "Media ID", "File Handle", or "Unknown". DOI detection uses standard DOI patterns and is not case-sensitive. |
 
 All properties are returned as strings. If a value is missing in the MARC record, the property will be an empty string or a default value.
 
