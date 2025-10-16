@@ -1,3 +1,58 @@
+# CLI harness for direct MARC file processing with error logging
+if __name__ == "__main__":
+    import sys
+    import json
+    if len(sys.argv) < 2:
+        print("Usage: python -m marc_converter.logic <file.mrc>")
+        sys.exit(1)
+    marc_path = sys.argv[1]
+    errors = []
+    records = []
+    try:
+        with open(marc_path, "rb") as fh:
+            reader = MARCReader(fh, to_unicode=True, force_utf8=True, utf8_handling="ignore")
+            for idx, rec in enumerate(reader):
+                try:
+                    row = marc_to_row(rec)
+                    records.append(row)
+                except Exception as rec_err:
+                    errors.append(f"Record {idx+1}: {rec_err}")
+        print(json.dumps(records, indent=2, ensure_ascii=False))
+        if errors:
+            print("\nErrors encountered during parsing:")
+            for err in errors:
+                print(err)
+    except Exception as e:
+        print(f"Error: {e}")
+        sys.exit(1)
+
+# CLI harness for direct MARC file processing with error logging
+if __name__ == "__main__":
+    import sys
+    import json
+    if len(sys.argv) < 2:
+        print("Usage: python -m marc_converter.logic <file.mrc>")
+        sys.exit(1)
+    marc_path = sys.argv[1]
+    errors = []
+    records = []
+    try:
+        with open(marc_path, "rb") as fh:
+            reader = MARCReader(fh, to_unicode=True, force_utf8=True, utf8_handling="ignore")
+            for idx, rec in enumerate(reader):
+                try:
+                    row = marc_to_row(rec)
+                    records.append(row)
+                except Exception as rec_err:
+                    errors.append(f"Record {idx+1}: {rec_err}")
+        print(json.dumps(records, indent=2, ensure_ascii=False))
+        if errors:
+            print("\nErrors encountered during parsing:")
+            for err in errors:
+                print(err)
+    except Exception as e:
+        print(f"Error: {e}")
+        sys.exit(1)
 # Core logic for MARC processing and file generation
 import tempfile
 import os
@@ -184,8 +239,8 @@ def marc_to_row(record):
     # --- Source ID and Type logic (refined DOI recognition) ---
     source_id = ""
     source_id_type = ""
-    doi_regex = re.compile(r"(?:10\\.\d{4,9}/[-._;()/:A-Z0-9]+)", re.IGNORECASE)
-    doi_url_regex = re.compile(r"https?://(?:dx\\.)?doi\\.org/(10\\.\d{4,9}/[-._;()/:A-Z0-9]+)", re.IGNORECASE)
+    doi_regex = re.compile(r"(?:10\.\d{4,9}/[-._;()/:A-Z0-9]+)", re.IGNORECASE)
+    doi_url_regex = re.compile(r"https?://(?:dx\.)?doi\.org/(10\.\d{4,9}/[-._;()/:A-Z0-9]+)", re.IGNORECASE)
 
     # 1. Doc ID (ProQuest)
     if title_id.startswith("urn:librarysimplified.org/terms/id/ProQuest%20Doc%20ID/"):
@@ -199,9 +254,11 @@ def marc_to_row(record):
     elif title_id.startswith("urn:uuid:"):
         source_id = title_id
         source_id_type = "Media ID"
-    # 4. DOI (URL form in title_url)
-    elif doi_url_regex.match(title_url):
-        match = doi_url_regex.match(title_url)
+    # 4. DOI (URL form in title_id or title_url)
+    elif title_id.startswith("https://doi.org/") or title_id.startswith("https://dx.doi.org/"):
+        source_id = title_id
+        source_id_type = "DOI"
+    elif title_url.startswith("https://doi.org/") or title_url.startswith("https://dx.doi.org/"):
         source_id = title_url
         source_id_type = "DOI"
     # 5. DOI (bare string in title_id, online_identifier, or title_url)
