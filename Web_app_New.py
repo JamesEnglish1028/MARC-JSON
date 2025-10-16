@@ -1,3 +1,16 @@
+@app.route('/api/convert', methods=['POST'])
+def api_convert():
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file uploaded'}), 400
+    file = request.files['file']
+    try:
+        reader = MARCReader(file)
+        records = [rec.as_dict() for rec in reader]
+        return jsonify(records)
+    except PymarcException as e:
+        return jsonify({'error': f'Error processing MARC file: {str(e)}'}), 400
+    except Exception as e:
+        return jsonify({'error': f'Unexpected error: {str(e)}'}), 500
 from flask import Flask, request, render_template_string, send_file, jsonify
 import csv
 import unicodedata
