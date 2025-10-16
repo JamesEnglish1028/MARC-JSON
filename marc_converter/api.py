@@ -21,16 +21,17 @@ def check_token():
 def api_convert():
     if not check_token():
         return jsonify({'error': 'Unauthorized'}), 401
+    fmt = request.args.get('format', 'json').lower()
     # Accept file upload
     if 'file' in request.files:
         file = request.files['file']
-        return process_marc_file_upload(file)
+        return process_marc_file_upload(file, fmt)
     # Accept JSON with URL
     if request.is_json:
         data = request.get_json()
         marc_url = data.get('url')
         if marc_url:
-            return process_marc_url_api(marc_url)
+            return process_marc_url_api(marc_url, fmt)
         else:
             return jsonify({'error': 'No url provided'}), 400
     return jsonify({'error': 'No file or url provided'}), 400

@@ -107,7 +107,9 @@ curl -H "Authorization: Bearer <your_token>" -F "file=@yourfile.mrc" http://loca
         "publication_type": "string",
         "date_monograph_published_online": "string",
         "first_editor": "string",
-        "access_type": "string"
+        "access_type": "string",
+        "source_id": "string",
+        "source_id_type": "string"
       },
       ...
     ]
@@ -133,6 +135,8 @@ curl -H "Authorization: Bearer <your_token>" -F "file=@yourfile.mrc" http://loca
 | `date_monograph_published_online`| string | Online publication date (from MARC 264/260)                      |
 | `first_editor`                  | string | First editor (from MARC 700$e=editor)                            |
 | `access_type`                   | string | "openaccess" or "paid" (from MARC 506/856)                      |
+| `source_id`                     | string | Source identifier, pattern-matched from title_id, URL, or ISBN   |
+| `source_id_type`                | string | Type of source ID: "DOI", "ISBN", "Doc ID", "Media ID", "File Handle", or "Unknown" |
 
 All properties are returned as strings. If a value is missing in the MARC record, the property will be an empty string or a default value.
 

@@ -38,17 +38,35 @@ def process_marc_url(marc_url, fmt):
         return f"<h3>Error generating output file: {e}</h3>"
 
 
-def process_marc_file_upload(file):
+def process_marc_file_upload(file, fmt='json'):
     try:
         reader = MARCReader(file)
-        records = [rec.as_dict() for rec in reader]
-        return jsonify(records)
+        if fmt == 'json':
+            records = [marc_to_row(rec) for rec in reader]
+            return jsonify(records)
+        elif fmt in ('csv', 'tsv'):
+            records = [marc_to_row(rec) for rec in reader]
+            delimiter = '\t' if fmt == 'tsv' else ','
+            import io
+            output = io.StringIO()
+            headers = list(records[0].keys()) if records else []
+            writer = csv.DictWriter(output, fieldnames=headers, delimiter=delimiter)
+            writer.writeheader()
+            for row in records:
+                writer.writerow(row)
+            output.seek(0)
+            from flask import Response
+            mimetype = 'text/tab-separated-values' if fmt == 'tsv' else 'text/csv'
+            return Response(output.read(), mimetype=mimetype,
+                            headers={"Content-Disposition": f"attachment;filename=output.{fmt}"})
+        else:
+            return jsonify({'error': f'Unsupported format: {fmt}'}), 400
     except PymarcException as e:
         return jsonify({'error': f'Error processing MARC file: {str(e)}'}), 400
     except Exception as e:
         return jsonify({'error': f'Unexpected error: {str(e)}'}), 500
 
-def process_marc_url_api(marc_url):
+def process_marc_url_api(marc_url, fmt='json'):
     if not marc_url.startswith('http'):
         return jsonify({'error': 'Invalid URL format'}), 400
     try:
@@ -57,9 +75,27 @@ def process_marc_url_api(marc_url):
     except requests.exceptions.RequestException as e:
         return jsonify({'error': f'Error fetching MARC file: {e}'}), 400
     try:
-        reader = MARCReader(r.content)
-        records = [rec.as_dict() for rec in reader]
-        return jsonify(records)
+        import io
+        reader = MARCReader(io.BytesIO(r.content))
+        if fmt == 'json':
+            records = [marc_to_row(rec) for rec in reader]
+            return jsonify(records)
+        elif fmt in ('csv', 'tsv'):
+            records = [marc_to_row(rec) for rec in reader]
+            delimiter = '\t' if fmt == 'tsv' else ','
+            output = io.StringIO()
+            headers = list(records[0].keys()) if records else []
+            writer = csv.DictWriter(output, fieldnames=headers, delimiter=delimiter)
+            writer.writeheader()
+            for row in records:
+                writer.writerow(row)
+            output.seek(0)
+            from flask import Response
+            mimetype = 'text/tab-separated-values' if fmt == 'tsv' else 'text/csv'
+            return Response(output.read(), mimetype=mimetype,
+                            headers={"Content-Disposition": f"attachment;filename=output.{fmt}"})
+        else:
+            return jsonify({'error': f'Unsupported format: {fmt}'}), 400
     except PymarcException as e:
         return jsonify({'error': f'Error processing MARC file: {str(e)}'}), 400
     except Exception as e:
@@ -122,17 +158,17 @@ def marc_to_row(record):
             if name:
                 first_author = clean_unicode(name)
                 break
-            if first_author:
-                break
+        if first_author:
+            break
     first_editor = next(
         (clean_unicode(get_subfield(f, 'a')) for f in record.get_fields('700') if 'e' in f and 'editor' in " ".join(f.get_subfields('e')).lower()),
         ""
     )
-    online_identifier = [
+    online_identifier_list = [
         clean_unicode(get_subfield(f, 'a'))
         for f in record.get_fields('020') if get_subfield(f, 'a')
     ]
-    online_identifier = "; ".join(online_identifier)
+    online_identifier = "; ".join(online_identifier_list)
     publisher_name, date_monograph_published_online = get_pub_info(record)
     publisher_name = clean_unicode(publisher_name)
     date_monograph_published_online = clean_unicode(date_monograph_published_online)
@@ -144,17 +180,47 @@ def marc_to_row(record):
             break
     publication_type = get_publication_type(record)
     access_type = get_access_type(record)
+
+    # --- Source ID and Type logic ---
+    source_id = ""
+    source_id_type = ""
+    # 1. Doc ID (ProQuest)
+    if title_id.startswith("urn:librarysimplified.org/terms/id/ProQuest%20Doc%20ID/"):
+        source_id = title_id.split("/ProQuest%20Doc%20ID/")[-1]
+        source_id_type = "Doc ID"
+    # 2. File Handle (OAPEN)
+    elif title_id.startswith("https://library.oapen.org/handle/"):
+        source_id = title_id.split("/handle/")[-1]
+        source_id_type = "File Handle"
+    # 3. Media ID (Open Research Library)
+    elif title_id.startswith("urn:uuid:"):
+        source_id = title_id
+        source_id_type = "Media ID"
+    # 4. DOI
+    elif title_url.startswith("https://doi.org/"):
+        source_id = title_url
+        source_id_type = "DOI"
+    # 5. ISBN
+    elif online_identifier_list:
+        source_id = online_identifier_list[0]
+        source_id_type = "ISBN"
+    else:
+        source_id = title_id
+        source_id_type = "Unknown"
+
     return {
         "title_id": title_id,
         "publication_title": publication_title,
         "title_url": title_url,
         "first_author": first_author,
-        "online_identifier": online_identifier, 
-        "publisher_name": publisher_name, 
-        "publication_type": publication_type, 
-        "date_monograph_published_online": date_monograph_published_online, 
-        "first_editor": first_editor, 
-        "access_type": access_type
+        "online_identifier": online_identifier,
+        "publisher_name": publisher_name,
+        "publication_type": publication_type,
+        "date_monograph_published_online": date_monograph_published_online,
+        "first_editor": first_editor,
+        "access_type": access_type,
+        "source_id": source_id,
+        "source_id_type": source_id_type
     }
 
 def generate_output_file(records, fmt):
@@ -183,7 +249,9 @@ def generate_output_file(records, fmt):
         "first_editor",
         "parent_publication_title_id",
         "preceding_publication_title_id",
-        "access_type"
+        "access_type",
+        "source_id",
+        "source_id_type"
     ]
     delimiter = "\t" if fmt == "tsv" else ","
     with open(f"output.{fmt}", "w", encoding="utf-8") as f:
@@ -214,6 +282,8 @@ def generate_output_file(records, fmt):
                 record.get("first_editor", ""),
                 record.get("parent_publication_title_id", ""),
                 record.get("preceding_publication_title_id", ""),
-                record.get("access_type", "paid")
+                record.get("access_type", "paid"),
+                record.get("source_id", ""),
+                record.get("source_id_type", "")
             ]
             f.write(delimiter.join(row) + "\n")
