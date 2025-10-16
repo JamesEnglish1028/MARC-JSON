@@ -218,7 +218,11 @@ def marc_to_row(record):
     first_editor = ""
     try:
         first_editor = next(
-            (clean_unicode(get_subfield(f, 'a')) for f in record.get_fields('700') if f and 'e' in f and f.get_subfields('e') and 'editor' in " ".join(f.get_subfields('e')).lower()),
+            (
+                clean_unicode(get_subfield(f, 'a'))
+                for f in record.get_fields('700') if f is not None and hasattr(f, 'get_subfields')
+                and f.get_subfields('e') and any('editor' in s.lower() for s in f.get_subfields('e'))
+            ),
             ""
         )
     except Exception:
