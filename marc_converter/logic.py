@@ -204,37 +204,51 @@ def get_pub_info(record):
     return publisher_name.strip(), date_monograph_published_online.strip()
 
 def marc_to_row(record):
-    title_id = clean_unicode(record['001'].value()) if '001' in record else "unknown"
-    publication_title = clean_unicode(f"{get_subfield(record['245'], 'a') or ''} {get_subfield(record['245'], 'b') or ''}".strip())
+    title_id = clean_unicode(record['001'].value()) if '001' in record and record['001'] and hasattr(record['001'], 'value') else "unknown"
+    publication_title = clean_unicode(f"{get_subfield(record.get('245'), 'a') or ''} {get_subfield(record.get('245'), 'b') or ''}".strip())
     first_author = ""
     for tag in ('100', '110', '111'):
-        for field in record.get_fields(tag):
+        for field in record.get_fields(tag) if record.get_fields(tag) else []:
             name = get_subfield(field, 'a')
             if name:
                 first_author = clean_unicode(name)
                 break
         if first_author:
             break
-    first_editor = next(
-        (clean_unicode(get_subfield(f, 'a')) for f in record.get_fields('700') if 'e' in f and 'editor' in " ".join(f.get_subfields('e')).lower()),
-        ""
-    )
-    online_identifier_list = [
-        clean_unicode(get_subfield(f, 'a'))
-        for f in record.get_fields('020') if get_subfield(f, 'a')
-    ]
+    first_editor = ""
+    try:
+        first_editor = next(
+            (clean_unicode(get_subfield(f, 'a')) for f in record.get_fields('700') if f and 'e' in f and f.get_subfields('e') and 'editor' in " ".join(f.get_subfields('e')).lower()),
+            ""
+        )
+    except Exception:
+        first_editor = ""
+    online_identifier_list = []
+    for f in record.get_fields('020') if record.get_fields('020') else []:
+        val = get_subfield(f, 'a')
+        if val:
+            online_identifier_list.append(clean_unicode(val))
     online_identifier = "; ".join(online_identifier_list)
-    publisher_name, date_monograph_published_online = get_pub_info(record)
+    try:
+        publisher_name, date_monograph_published_online = get_pub_info(record)
+    except Exception:
+        publisher_name, date_monograph_published_online = "", ""
     publisher_name = clean_unicode(publisher_name)
     date_monograph_published_online = clean_unicode(date_monograph_published_online)
     title_url = "N/A"
-    for field in record.get_fields('856'):
+    for field in record.get_fields('856') if record.get_fields('856') else []:
         url = get_subfield(field, 'u')
         if url:
             title_url = clean_unicode(url)
             break
-    publication_type = get_publication_type(record)
-    access_type = get_access_type(record)
+    try:
+        publication_type = get_publication_type(record)
+    except Exception:
+        publication_type = "other"
+    try:
+        access_type = get_access_type(record)
+    except Exception:
+        access_type = "openaccess"
 
     # --- Source ID and Type logic (refined DOI recognition) ---
     source_id = ""
