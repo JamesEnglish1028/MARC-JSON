@@ -25,3 +25,17 @@ else:
 # Import routes to register them with the app
 import marc_converter.views
 import marc_converter.api
+
+
+# Health check endpoint for Render and load balancers
+@app.route('/health', methods=['GET'])
+def health():
+	return 'OK', 200
+
+
+def log_startup_info():
+	logger.info('Starting marc_converter app')
+	logger.info(f"DEBUG={os.environ.get('DEBUG')}, FLASK_ENV={os.environ.get('FLASK_ENV')}, LOG_LEVEL={os.environ.get('LOG_LEVEL')}")
+
+
+log_startup_info()
