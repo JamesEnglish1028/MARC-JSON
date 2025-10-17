@@ -1,0 +1,17 @@
+__pycache__/
+.venv/
+venv/
+*.pyc
+*.pyo
+*.pyd
+*.sqlite3
+*.db
+*.egg-info/
+dist/
+build/
+output.json
+test_output.txt
+oapen_test_output.txt
+*.xlsx
+*.tsv
+*.csv
