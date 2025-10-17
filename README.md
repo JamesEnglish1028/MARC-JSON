@@ -1,6 +1,6 @@
 
 
-# MARC-Converter
+# MARC-JSON
 
 MARC-Converter is a Python package and Flask web app for converting MARC records (from The Palace Project, uploaded files, or remote URLs) into KBART-style inventory files (TSV, XLSX, or CSV).
 
